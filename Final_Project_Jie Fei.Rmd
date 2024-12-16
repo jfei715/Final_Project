@@ -1,0 +1,232 @@
+---
+title: "Final_Project"
+author: "Jie Fei"
+output: xaringan::moon_reader
+---
+
+# Introduction
+- **Island State Selected**: Fiji
+- **Purpose**: Analyzing Fiji's location, demographics, economy, and key characteristics using R.
+
+---
+
+```{r}
+# Install required packages
+# install.packages(c("sf", "ggplot2", "dplyr", "rnaturalearth", "rnaturalearthdata", "kableExtra", "xaringan"))
+
+# Load libraries
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(kableExtra)
+library(xaringan)
+```
+
+---
+
+# A map showing where in the world it is located.
+# This section loads a world map and highlights Fiji's location with its geographical coordinates (latitude: -17.7134, longitude: 178.0650). A red dot marks Fiji on the map.
+```{r}
+# Load world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# I chose Fiji as my Island State for this project
+# Define Fiji's coordinates
+fiji_coords <- tibble(
+  name = "Fiji",
+  lat = -17.7134,
+  long = 178.0650
+)
+
+# Plot the world map with Fiji's location
+world_map <- ggplot(data = world) +
+  geom_sf(fill = "lightblue", color = "gray") +
+  geom_point(data = fiji_coords, aes(x = long, y = lat), color = "red", size = 3) +
+  labs(
+    title = "Location of Fiji in the World",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal()
+
+print(world_map)
+```
+
+---
+
+# A map of the island.
+# A detailed map of Fiji with its boundaries highlighed, filled in light green to depict its landmass.
+```{r}
+# Load Fiji's shapefile
+# Download the administrative boundary shapefile for Fiji from IGISMAP website
+fiji_shapefile <- st_read("gadm41_FJI_0.shp")
+
+# Plot Fiji with zoomed-in boundaries
+ggplot(data = fiji_shapefile) +
+  geom_sf(fill = "lightgreen", color = "darkgreen") +
+  coord_sf(
+    xlim = c(176, 180),
+    ylim = c(-20, -16)
+  ) +
+  labs(
+    title = "Map of Fiji (Zoomed)",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal()
+```
+
+---
+
+# Key facts about the Island State.
+# A formatted table displaying key facts about Fiji, emphasizing its biodiversity, parliamentary democracy, and historical independence.
+```{r}
+# Create a table of key facts
+key_facts <- tibble(
+  Category = c("Government", "Economy", "Population", "Natural Environment", "History"),
+  Details = c(
+    "Parliamentary Democracy",
+    "Tourism, Agriculture, and Fisheries",
+    "Approximately 889,950 people",
+    "Rich biodiversity with coral reefs and tropical forests",
+    "Gained independence from the UK on October 10, 1970"
+  )
+)
+
+# Display the table with kableExtra for formatting
+key_facts_table <- kable(key_facts, col.names = c("Category", "Details")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+key_facts_table
+```
+
+# A projection of GDP.
+# A line chart showing historical GDP trends in blue and projected GDP trends in green (dashed line). In addtion, a clear visualization of Fiji's economic growth and anticipated trends based on linear regression.
+```{r}
+# Historical GDP data for Fiji (in billions USD)
+# We use GDP data for Fiji from 2000 to 2023, sourced from Macrotrends
+gdp_data <- data.frame(
+  year = 2000:2023,
+  gdp = c(1.68, 1.65, 1.83, 2.30, 2.71, 2.98, 3.08, 3.38, 3.52, 2.87,
+          3.14, 3.78, 3.97, 4.19, 4.86, 4.68, 4.93, 5.35, 5.58, 5.44,
+          4.43, 4.31, 4.98, 5.49)  # GDP in billions USD
+)
+
+# Plot historical GDP data
+ggplot(gdp_data, aes(x = year, y = gdp)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(
+    title = "Historical GDP of Fiji (2000-2023)",
+    x = "Year",
+    y = "GDP (in billions USD)"
+  ) +
+  theme_minimal()
+
+# Fit a linear model
+gdp_model <- lm(gdp ~ year, data = gdp_data)
+
+# Create future years for projection
+future_years <- data.frame(year = 2024:2030)
+
+# Predict GDP for future years
+future_gdp <- predict(gdp_model, newdata = future_years)
+
+# Combine historical and projected data
+gdp_projection <- rbind(
+  gdp_data,
+  data.frame(year = future_years$year, gdp = future_gdp)
+)
+
+# Plot historical and projected GDP
+ggplot(gdp_projection, aes(x = year, y = gdp)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(data = gdp_data, aes(x = year, y = gdp), color = "red", size = 2) +
+  geom_line(data = future_years, aes(x = year, y = future_gdp), linetype = "dashed", color = "green") +
+  labs(
+    title = "Historical and Projected GDP of Fiji (2000-2030)",
+    x = "Year",
+    y = "GDP (in billions USD)"
+  ) +
+  theme_minimal()
+```
+
+# Comparison of the Island State relative to other Island States in the same region.
+# 1) Comparison: A horizontal bar chart showing Fiji's relatively high GDP compared to neighboring states. 2) Population vs. Land Area: A scatter plot demonstrating the relationship between population and land area, with Fiji labeled prominently. 3) Tourist Arrivals: A bar chart highlighting Fiji as a leading tourist destination in the region.
+```{r}
+# We included Fiji, Vanuatu, Tonga, Samoa, and Solomon Islands in our comparison
+# Comparison data for South Pacific island states
+island_states <- tibble(
+  country = c("Fiji", "Vanuatu", "Tonga", "Samoa", "Solomon Islands"),
+  gdp = c(5.49, 0.99, 0.52, 0.90, 1.55),             # GDP in billions USD (2023, Macrotrends)
+  population = c(889950, 334506, 100209, 222382, 707851), # Population (2023, World Bank)
+  land_area = c(18274, 12189, 747, 2842, 28896),         # Land area in square km
+  tourists = c(800000, 300000, 90000, 150000, 30000)      # Annual tourist arrivals (approx.)
+)
+
+# Plot GDP comparison
+ggplot(island_states, aes(x = reorder(country, gdp), y = gdp, fill = country)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    title = "GDP of South Pacific Island States (2023)",
+    x = "Country",
+    y = "GDP (in billions USD)"
+  ) +
+  theme_minimal()
+
+# Scatter plot of population vs. land area
+ggplot(island_states, aes(x = land_area, y = population, label = country)) +
+  geom_point(size = 4, color = "blue") +
+  geom_text(vjust = -0.5, hjust = 0.5, size = 3) +
+  labs(
+    title = "Population vs. Land Area of South Pacific Island States (2023)",
+    x = "Land Area (sq km)",
+    y = "Population"
+  ) +
+  theme_minimal()
+
+# Plot tourist arrivals
+ggplot(island_states, aes(x = reorder(country, tourists), y = tourists, fill = country)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    title = "Tourist Arrivals to South Pacific Island States (2023)",
+    x = "Country",
+    y = "Tourist Arrivals"
+  ) +
+  theme_minimal()
+
+# Create a summary table
+kable(island_states, col.names = c("Country", "GDP (Billion USD)", "Population", "Land Area (sq km)", "Tourist Arrivals")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+# SWOT analysis of the Island State.
+# A table outlines Fiji's Strengths, Weaknesses, Opportunities, and Threats (SWOT). 
+```{r}
+# Create a SWOT table
+swot <- data.frame(
+  Category = c("Strengths", "Weaknesses", "Opportunities", "Threats"),
+  Details = c(
+    # Strengths
+    "1. Thriving tourism industry.\n2. Rich natural biodiversity, including coral reefs.\n3. Strategic location in the South Pacific.\n4. Stable democratic government.\n5. Strong cultural heritage.",
+    
+    # Weaknesses
+    "1. Vulnerable to natural disasters (cyclones).\n2. High reliance on tourism and agriculture.\n3. Limited industrial diversification.\n4. Small population limits domestic market size.\n5. Dependence on imports for energy and goods.",
+    
+    # Opportunities
+    "1. Growth in eco-tourism and adventure tourism.\n2. Renewable energy potential (solar, wind, and hydropower).\n3. Blue economy development (sustainable use of ocean resources).\n4. Strategic partnerships with Australia, New Zealand, and China.\n5. Investment in digital transformation and remote work hubs.",
+    
+    # Threats
+    "1. Climate change and rising sea levels.\n2. Increasing frequency of extreme weather events.\n3. Competition from other tourist destinations in the Pacific.\n4. Global economic instability and its impact on tourism.\n5. Vulnerability to external shocks such as pandemics."
+  )
+)
+
+# Display the SWOT analysis as a table
+kable(swot, col.names = c("Category", "Details")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
